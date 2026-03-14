@@ -1,0 +1,316 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String         @id @default(uuid())
+  email             String         @unique
+  password          String
+  role              Role           @default(USER)
+  isVerified        Boolean        @default(false)
+  avatarUrl         String?
+  verificationToken String?
+  firstName         String?
+  lastName          String?
+  products          Product[]
+  cart              Cart?
+  userOrders        Order[]
+  conversation      Conversation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  SUB_ADMIN
+  ADMIN
+  SUPER_ADMIN
+  SYSTEM
+}
+
+model Category {
+  id       String  @id @default(uuid())
+  name     String  @unique
+  slug     String  @unique
+  isActive Boolean @default(true)
+
+  subCategories SubCategory[]
+  products      Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SubCategory {
+  id       String  @id @default(uuid())
+  name     String
+  slug     String  @unique
+  isActive Boolean @default(true)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+enum ProductStatus {
+  ACTIVE
+  OUT_OF_STOCK
+  ARCHIVED
+}
+
+model Product {
+  id String @id @default(uuid())
+
+  name        String
+  slug        String @unique
+  description String
+
+  price    Decimal @db.Decimal(10, 2)
+  quantity Int
+
+  status   ProductStatus @default(ACTIVE)
+  isActive Boolean       @default(true)
+
+  mainImage     String
+  galleryImages String[]
+
+  categoryId    String
+  subCategoryId String
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  category    Category    @relation(fields: [categoryId], references: [id])
+  subCategory SubCategory @relation(fields: [subCategoryId], references: [id])
+
+  cartItems     CartItem[]
+  productOrders OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([quantity])
+  @@index([categoryId])
+}
+
+model Cart {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CartItem {
+  id String @id @default(uuid())
+
+  cartId String
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@index([productId])
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  FULFILLED
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYSTACK
+  PAY_ON_DELIVERY
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum RefundStatus {
+  NONE
+  REQUESTED
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+model Order {
+  id String @id @default(uuid())
+
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id])
+
+  status OrderStatus @default(PENDING)
+
+  payment_provider   PaymentProvider
+  payment_status     PaymentStatus   @default(PENDING)
+  isPaymentFinalized Boolean         @default(false)
+
+  payment_reference String? @unique
+  idempotency_key   String? @unique
+
+  refundStatus    RefundStatus @default(NONE)
+  refundAmount    Decimal?     @db.Decimal(10, 2)
+  refundReference String?
+  refundedAt      DateTime?
+
+  cancelledAt        DateTime?
+  cancelledBy        String?
+  cancellationReason String?
+
+  orderAudit    OrderAudit[]
+  conversations Conversation[]
+
+  subtotal Decimal @db.Decimal(10, 2)
+  total    Decimal @db.Decimal(10, 2)
+  currency String  @default("NGN")
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([user_id])
+  @@index([status])
+  @@index([payment_status])
+  @@index([refundStatus])
+}
+
+model OrderItem {
+  id String @id @default(uuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  price    Decimal @db.Decimal(10, 2)
+  quantity Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum OrderAuditAction {
+  ORDER_CREATED
+  PAYMENT_CONFIRMED
+  ORDER_CANCELLED
+  ORDER_FULFILLED
+  REFUND_REQUESTED
+  REFUND_SUCCESS
+  REFUND_FAILED
+  STATUS_UPDATED
+}
+
+model OrderAudit {
+  id String @id @default(uuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  action OrderAuditAction
+
+  performedBy String?
+  role        Role?
+
+  reason String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+enum ConversationStatus {
+  OPEN
+  CLOSED
+}
+
+model Conversation {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  orderId String? // Link to a specific order
+  order   Order?  @relation(fields: [orderId], references: [id])
+
+  status ConversationStatus @default(OPEN)
+
+  closedAt     DateTime?
+  closedBy     String? // admin id or system
+  closedReason String?
+
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum MessageSenderRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+  SYSTEM
+}
+
+model Message {
+  id String @id @default(uuid())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId   String?
+  senderRole MessageSenderRole
+
+  content String
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([senderRole])
+  @@index([createdAt])
+}
