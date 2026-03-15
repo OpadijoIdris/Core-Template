@@ -29,8 +29,22 @@ app.use(compression()); // Compress responses
 app.use(morgan('dev')); // Logger
 
 // 2. DYNAMIC CORS CONFIGURATION
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:3000",
+  "http://localhost:5173", // Common Vite port
+  /\.vercel\.app$/, // Allow all Vercel subdomains (Safer for reviews)
+];
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.some(pattern => 
+            pattern instanceof RegExp ? pattern.test(origin) : pattern === origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS Policy: Access Denied'));
+        }
+    },
     credentials: true,
 }));
 

@@ -1,6 +1,13 @@
 # Coree-Template - Professional E-Commerce Ecosystem
 
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://core-template-seven.vercel.app/)
+
 Welcome to **Coree-Template**, a high-performance, enterprise-ready e-commerce platform designed for modern retail. This monorepo contains both an advanced **Node.js/PostgreSQL** backend and a cutting-edge **Next.js** frontend.
+
+### 🔗 Live Demo
+- **Storefront:** [https://core-template-seven.vercel.app/](https://core-template-seven.vercel.app/)
+- **Admin Dashboard:** [https://core-template-seven.vercel.app/admin](https://core-template-seven.vercel.app/admin)
+- **Demo Admin:** `admin@example.com` / `password123`
 
 ## 🌟 Project Vision
 
