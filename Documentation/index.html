@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coree-Template Documentation</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; display: flex; }
+        nav { width: 250px; background: #fff; height: 100vh; position: fixed; border-right: 1px solid #e2e8f0; padding: 2rem 1rem; }
+        nav h2 { color: var(--primary); font-size: 1.2rem; margin-bottom: 2rem; }
+        nav a { display: block; padding: 0.5rem 0; color: #64748b; text-decoration: none; transition: 0.2s; }
+        nav a:hover { color: var(--primary); padding-left: 5px; }
+        main { margin-left: 280px; padding: 3rem; max-width: 900px; }
+        .card { background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        code { background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; }
+        pre { background: #1e293b; color: #fff; padding: 1.5rem; border-radius: 8px; overflow-x: auto; }
+        .badge { background: #dcfce7; color: #166534; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.8rem; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2>Coree-Template</h2>
+        <a href="#intro">Introduction</a>
+        <a href="#tech">Tech Stack</a>
+        <a href="#install">Installation</a>
+        <a href="#env">Environment Setup</a>
+        <a href="#seed">Database Seeding</a>
+        <a href="#features">Key Features</a>
+        <a href="#support">Support</a>
+    </nav>
+    <main>
+        <section id="intro">
+            <h1>Coree-Template Documentation <span class="badge">v1.0.0</span></h1>
+            <p>Thank you for purchasing <strong>Coree-Template</strong>! This is a high-performance, enterprise-ready e-commerce ecosystem built with Node.js and Next.js.</p>
+        </section>
+
+        <section id="tech" class="card">
+            <h3>🛠️ Tech Stack</h3>
+            <ul>
+                <li><strong>Backend:</strong> Node.js (Express v5), Prisma, PostgreSQL</li>
+                <li><strong>Frontend:</strong> Next.js 15 (App Router), Tailwind CSS v4</li>
+                <li><strong>State:</strong> Zustand & TanStack Query v5</li>
+                <li><strong>Payments:</strong> Paystack & Pay on Delivery</li>
+            </ul>
+        </section>
+
+        <section id="install" class="card">
+            <h3>🚀 Quick Installation</h3>
+            <p>Follow these steps to get your store online in minutes:</p>
+            <pre>
+# 1. Install Backend
+cd backend
+npm install
+
+# 2. Setup Database
+npx prisma migrate dev
+npx prisma db seed
+
+# 3. Install Frontend
+cd project-core-frontend
+npm install</pre>
+        </section>
+
+        <section id="env" class="card">
+            <h3>🔐 Environment Setup</h3>
+            <p>Rename <code>.env.example</code> to <code>.env</code> in both folders and add your credentials:</p>
+            <ul>
+                <li><strong>DATABASE_URL:</strong> Your PostgreSQL connection string.</li>
+                <li><strong>PAYSTACK_SECRET_KEY:</strong> From your Paystack dashboard.</li>
+                <li><strong>CLOUDINARY_CLOUD_NAME:</strong> For image storage.</li>
+            </ul>
+        </section>
+
+        <section id="seed" class="card">
+            <h3>🌱 Sample Data (Seeding)</h3>
+            <p>Run <code>npx prisma db seed</code> in the backend folder to instantly populate your store with:</p>
+            <ul>
+                <li><strong>Admin Account:</strong> admin@example.com / password123</li>
+                <li><strong>Sample Products:</strong> Jewelry, Watches, and Accessories.</li>
+                <li><strong>Analytics:</strong> Dummy orders to see your dashboard charts in action.</li>
+            </ul>
+        </section>
+
+        <section id="support">
+            <h3>💬 Support & Updates</h3>
+            <p>Need help? Contact us via our CodeCanyon profile page. We offer free updates and support for all buyers.</p>
+        </section>
+    </main>
+</body>
+</html>

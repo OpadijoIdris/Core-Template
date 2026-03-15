@@ -1,0 +1,30 @@
+CORE-TEMPLATE - REVIEWER SETUP GUIDE
+------------------------------------
+
+Thank you for reviewing Coree-Template! This is a professional full-stack 
+e-commerce ecosystem built with Next.js 15, Node.js (Express v5), and Prisma (PostgreSQL).
+
+QUICK START FOR REVIEW:
+1. Install Backend: cd backend && npm install
+2. Setup Database: 
+   - Add your PostgreSQL URL to backend/.env
+   - Run: npx prisma migrate dev
+   - Run: npx prisma db seed (CRITICAL: This creates the test data)
+3. Start Backend: npm run dev (Running on http://localhost:5000)
+
+4. Install Frontend: cd project-core-frontend && npm install
+5. Setup Frontend: 
+   - Add NEXT_PUBLIC_API_URL=http://localhost:5000/api to .env.local
+6. Start Frontend: npm run dev (Running on http://localhost:3000)
+
+TEST CREDENTIALS (PROVIDED BY SEED SCRIPT):
+-------------------------------------------
+Admin Dashboard: http://localhost:3000/admin
+Admin Email: admin@example.com
+Admin Password: password123
+
+KEY FEATURES TO TEST:
+- Admin Dashboard: Real-time charts (Recharts) and Order Management.
+- Support System: Real-time chat between User and Admin.
+- Payments: Integrated Paystack and Pay on Delivery.
+- Refunds: Automated Paystack refund logic in backend/src/services/refund.service.js.

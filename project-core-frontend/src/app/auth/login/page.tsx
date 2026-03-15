@@ -6,7 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { login as loginUser } from '../../../services/authApi';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiMail, FiLock, FiArrowRight, FiLoader, FiAlertCircle } from 'react-icons/fi';
+import { FiMail, FiLock, FiArrowRight, FiLoader, FiAlertCircle, FiShield } from 'react-icons/fi';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -26,13 +26,29 @@ const LoginPage = () => {
     } catch (err: any) {
       const message = err.response?.data?.message || 'Authentication failed.';
       
-      // Auto-redirect unverified users
       if (message.toLowerCase().includes('verify') || message.toLowerCase().includes('verification')) {
         router.push('/auth/verify-email');
         return;
       }
       
       setError(message || 'Authentication failed. Please verify your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    const demoEmail = 'admin@example.com';
+    const demoPassword = 'password123';
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setError('');
+    setIsLoading(true);
+    try {
+      const userData = await loginUser({ email: demoEmail, password: demoPassword });
+      login(userData); 
+    } catch (err: any) {
+      setError('Demo login failed. Please ensure the database is seeded.');
     } finally {
       setIsLoading(false);
     }
@@ -113,14 +129,26 @@ const LoginPage = () => {
                 </div>
               </div>
 
-              <button 
-                type="submit" 
-                disabled={isLoading}
-                className="w-full py-5 bg-[#0f172a] text-white rounded-2xl font-black uppercase text-sm tracking-[0.2em] shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50"
-              >
-                {isLoading ? <FiLoader className="animate-spin" /> : <FiArrowRight />}
-                {isLoading ? "Verifying..." : "Login"}
-              </button>
+              <div className="space-y-3">
+                <button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="w-full py-5 bg-[#0f172a] text-white rounded-2xl font-black uppercase text-sm tracking-[0.2em] shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isLoading ? <FiLoader className="animate-spin" /> : <FiArrowRight />}
+                  {isLoading ? "Verifying..." : "Login"}
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={handleDemoLogin}
+                  disabled={isLoading}
+                  className="w-full py-4 bg-amber-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg hover:bg-amber-600 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                >
+                  <FiShield />
+                  Login as Demo Admin
+                </button>
+              </div>
             </form>
 
             <div className="mt-10 text-center">
