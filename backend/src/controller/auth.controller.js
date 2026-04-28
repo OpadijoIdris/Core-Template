@@ -12,6 +12,7 @@ import {
  import redis from "../config/redis.js";
  import jwt from "jsonwebtoken";
  import { checkLoginRateLimit, resetLoginRateLimit, rateLimit, resetRateLimit } from "../config/rateLimit.js";
+ import crypto from "crypto";
 
  export const register = async (req, res) => {
   try {
@@ -111,6 +112,7 @@ export const login = async (req, res) => {
         });
         
     } catch (error) {
+        console.error("LOGIN ERROR:", error);
         return res.status(400).json({
             success: false,
             message: error.message
