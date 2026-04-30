@@ -5,27 +5,40 @@ const { Role, ProductStatus, OrderStatus, PaymentProvider, PaymentStatus, Conver
 import bcrypt from 'bcrypt';
 
 async function main() {
-  console.log('--- Deep Seeding Database ---');
+  console.log('--- [DEBUG] Seed Script Started ---');
+  console.log('--- [DEBUG] DATABASE_URL exists:', !!process.env.DATABASE_URL);
 
   // 1. Clean existing data
   try {
+    console.log('--- [DEBUG] Cleaning Message... ---');
     await prisma.message.deleteMany();
+    console.log('--- [DEBUG] Cleaning Conversation... ---');
     await prisma.conversation.deleteMany();
+    console.log('--- [DEBUG] Cleaning OrderAudit... ---');
     await prisma.orderAudit.deleteMany();
+    console.log('--- [DEBUG] Cleaning OrderItem... ---');
     await prisma.orderItem.deleteMany();
+    console.log('--- [DEBUG] Cleaning Order... ---');
     await prisma.order.deleteMany();
+    console.log('--- [DEBUG] Cleaning CartItem... ---');
     await prisma.cartItem.deleteMany();
+    console.log('--- [DEBUG] Cleaning Cart... ---');
     await prisma.cart.deleteMany();
+    console.log('--- [DEBUG] Cleaning Product... ---');
     await prisma.product.deleteMany();
+    console.log('--- [DEBUG] Cleaning SubCategory... ---');
     await prisma.subCategory.deleteMany();
+    console.log('--- [DEBUG] Cleaning Category... ---');
     await prisma.category.deleteMany();
+    console.log('--- [DEBUG] Cleaning User... ---');
     await prisma.user.deleteMany();
     console.log('Old data cleared.');
   } catch (error) {
-    console.log('Note: Error clearing tables.');
+    console.log('--- [DEBUG] Error clearing tables:', error.message);
   }
 
   // 2. Create Admin and Regular Users
+  console.log('--- [DEBUG] Creating Users... ---');
   const hashedPassword = await bcrypt.hash('password123', 10);
   
   const admin = await prisma.user.create({
@@ -57,6 +70,7 @@ async function main() {
   console.log('Users created: Admin + 3 Customers.');
 
   // 3. Create Categories and Subcategories
+  console.log('--- [DEBUG] Creating Categories... ---');
   const catJewelry = await prisma.category.create({
     data: {
       name: 'Jewelry', slug: 'jewelry',
@@ -74,7 +88,8 @@ async function main() {
   });
   console.log('Categories created.');
 
-  // 4. Create Products (Active and Archived)
+  // 4. Create Products
+  console.log('--- [DEBUG] Creating Products... ---');
   const products = [
     { name: 'Diamond Ring', slug: 'diamond-ring', price: 1200, status: ProductStatus.ACTIVE, cat: catJewelry, sub: catJewelry.subCategories[0] },
     { name: 'Gold Necklace', slug: 'gold-necklace', price: 800, status: ProductStatus.ACTIVE, cat: catJewelry, sub: catJewelry.subCategories[1] },
@@ -94,9 +109,10 @@ async function main() {
     });
     createdProducts.push(product);
   }
-  console.log('Products created (Active, Archived, OOS).');
+  console.log('Products created.');
 
   // 5. Create Sample Orders
+  console.log('--- [DEBUG] Creating Orders... ---');
   const order1 = await prisma.order.create({
     data: {
       user_id: users[0].id,
@@ -118,10 +134,11 @@ async function main() {
       items: { create: [{ productId: createdProducts[1].id, price: 800, quantity: 1 }] }
     }
   });
-  console.log('Orders created (Stripe Paid & POD Pending).');
+  console.log('Orders created.');
 
-  // 6. Create Support Conversations
-  const conv1 = await prisma.conversation.create({
+  // 6. Support Conversations
+  console.log('--- [DEBUG] Creating Conversations... ---');
+  await prisma.conversation.create({
     data: {
       userId: users[0].id,
       orderId: order1.id,
@@ -134,29 +151,16 @@ async function main() {
       }
     }
   });
+  console.log('Support chats created.');
 
-  const conv2 = await prisma.conversation.create({
-    data: {
-      userId: users[2].id,
-      status: ConversationStatus.CLOSED,
-      closedReason: 'Resolved by Admin',
-      messages: {
-        create: [
-          { content: 'I forgot my password.', senderRole: MessageSenderRole.USER, senderId: users[2].id },
-          { content: 'You can reset it via email.', senderRole: MessageSenderRole.ADMIN, senderId: admin.id }
-        ]
-      }
-    }
-  });
-  console.log('Support chats created (Open & Closed).');
-
-  console.log('--- Seeding Completed! ---');
+  console.log('--- Seeding Completed Successfully! ---');
 }
 
 main()
   .catch((e) => {
-    console.error('Error during seeding:');
-    console.error(e);
+    console.error('--- [CRITICAL ERROR DURING SEEDING] ---');
+    console.error('Message:', e.message);
+    console.error('Stack:', e.stack);
     process.exit(1);
   })
   .finally(async () => {
