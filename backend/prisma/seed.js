@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import prisma from '../src/config/postgres.js';
-import { Role, ProductStatus, OrderStatus, PaymentProvider, PaymentStatus, ConversationStatus, MessageSenderRole } from '../src/generated/index.js';
+import { Role, ProductStatus, OrderStatus, PaymentProvider, PaymentStatus, ConversationStatus, MessageSenderRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 async function main() {
