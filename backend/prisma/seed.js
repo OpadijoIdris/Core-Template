@@ -6,12 +6,20 @@ import bcrypt from 'bcrypt';
 
 async function main() {
   console.log('--- [DEBUG] Seed Script Started ---');
-  if (process.env.DATABASE_URL) {
+  
+  let url = process.env.DATABASE_URL;
+  if (url) {
+    // Clean the URL of any potential wrapping quotes or whitespace
+    url = url.trim().replace(/^["'](.+)["']$/, '$1');
+    console.log('--- [DEBUG] DATABASE_URL Length:', url.length);
+    console.log('--- [DEBUG] DATABASE_URL Start:', url.substring(0, 10) + '...');
+    
     try {
-      const dbUrl = new URL(process.env.DATABASE_URL);
+      const dbUrl = new URL(url);
       console.log('--- [DEBUG] DB Hostname:', dbUrl.hostname);
     } catch (e) {
-      console.log('--- [DEBUG] Could not parse DATABASE_URL');
+      console.log('--- [DEBUG] Still could not parse DATABASE_URL after cleaning');
+      console.log('--- [DEBUG] Error:', e.message);
     }
   } else {
     console.log('--- [DEBUG] DATABASE_URL is MISSING');
