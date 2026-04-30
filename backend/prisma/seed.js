@@ -9,57 +9,27 @@ async function main() {
   
   let url = process.env.DATABASE_URL;
   if (url) {
-    // Clean the URL of any potential wrapping quotes or whitespace
     url = url.trim().replace(/^["'](.+)["']$/, '$1');
     console.log('--- [DEBUG] DATABASE_URL Length:', url.length);
-    console.log('--- [DEBUG] DATABASE_URL Start:', url.substring(0, 10) + '...');
-    
     try {
       const dbUrl = new URL(url);
       console.log('--- [DEBUG] DB Hostname:', dbUrl.hostname);
-    } catch (e) {
-      console.log('--- [DEBUG] Still could not parse DATABASE_URL after cleaning');
-      console.log('--- [DEBUG] Error:', e.message);
-    }
-  } else {
-    console.log('--- [DEBUG] DATABASE_URL is MISSING');
+    } catch (e) {}
   }
 
-  // 1. Clean existing data
-  try {
-    console.log('--- [DEBUG] Cleaning Message... ---');
-    await prisma.message.deleteMany();
-    console.log('--- [DEBUG] Cleaning Conversation... ---');
-    await prisma.conversation.deleteMany();
-    console.log('--- [DEBUG] Cleaning OrderAudit... ---');
-    await prisma.orderAudit.deleteMany();
-    console.log('--- [DEBUG] Cleaning OrderItem... ---');
-    await prisma.orderItem.deleteMany();
-    console.log('--- [DEBUG] Cleaning Order... ---');
-    await prisma.order.deleteMany();
-    console.log('--- [DEBUG] Cleaning CartItem... ---');
-    await prisma.cartItem.deleteMany();
-    console.log('--- [DEBUG] Cleaning Cart... ---');
-    await prisma.cart.deleteMany();
-    console.log('--- [DEBUG] Cleaning Product... ---');
-    await prisma.product.deleteMany();
-    console.log('--- [DEBUG] Cleaning SubCategory... ---');
-    await prisma.subCategory.deleteMany();
-    console.log('--- [DEBUG] Cleaning Category... ---');
-    await prisma.category.deleteMany();
-    console.log('--- [DEBUG] Cleaning User... ---');
-    await prisma.user.deleteMany();
-    console.log('Old data cleared.');
-  } catch (error) {
-    console.log('--- [DEBUG] Error clearing tables:', error.message);
-  }
-
-  // 2. Create Admin and Regular Users
-  console.log('--- [DEBUG] Creating Users... ---');
   const hashedPassword = await bcrypt.hash('password123', 10);
   
-  const admin = await prisma.user.create({
-    data: {
+  console.log('--- [DEBUG] Upserting Admin User... ---');
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@example.com' },
+    update: {
+      password: hashedPassword,
+      role: Role.SUPER_ADMIN,
+      isVerified: true,
+      firstName: 'Coree',
+      lastName: 'Admin',
+    },
+    create: {
       email: 'admin@example.com',
       password: hashedPassword,
       role: Role.SUPER_ADMIN,
@@ -68,9 +38,35 @@ async function main() {
       lastName: 'Admin',
     },
   });
+  console.log('Admin user upserted:', admin.email);
 
-  const users = [];
+  // 1. Clean other data (Optional, but let's keep it clean for demo)
+  try {
+    console.log('--- [DEBUG] Cleaning Other Tables... ---');
+    await prisma.message.deleteMany();
+    await prisma.conversation.deleteMany();
+    await prisma.orderAudit.deleteMany();
+    await prisma.orderItem.deleteMany();
+    await prisma.order.deleteMany();
+    await prisma.cartItem.deleteMany();
+    await prisma.cart.deleteMany();
+    await prisma.product.deleteMany();
+    await prisma.subCategory.deleteMany();
+    await prisma.category.deleteMany();
+    // We don't delete users here because we just upserted the admin
+    await prisma.user.deleteMany({
+      where: {
+        NOT: { email: 'admin@example.com' }
+      }
+    });
+    console.log('Other data cleared.');
+  } catch (error) {
+    console.log('--- [DEBUG] Error clearing tables:', error.message);
+  }
+
+  // 2. Create Regular Users
   const userEmails = ['john@example.com', 'jane@example.com', 'bob@example.com'];
+  const createdUsers = [];
   for (const email of userEmails) {
     const user = await prisma.user.create({
       data: {
@@ -82,12 +78,11 @@ async function main() {
         lastName: 'Customer',
       },
     });
-    users.push(user);
+    createdUsers.push(user);
   }
-  console.log('Users created: Admin + 3 Customers.');
+  console.log('Customers created.');
 
   // 3. Create Categories and Subcategories
-  console.log('--- [DEBUG] Creating Categories... ---');
   const catJewelry = await prisma.category.create({
     data: {
       name: 'Jewelry', slug: 'jewelry',
@@ -106,7 +101,6 @@ async function main() {
   console.log('Categories created.');
 
   // 4. Create Products
-  console.log('--- [DEBUG] Creating Products... ---');
   const products = [
     { name: 'Diamond Ring', slug: 'diamond-ring', price: 1200, status: ProductStatus.ACTIVE, cat: catJewelry, sub: catJewelry.subCategories[0] },
     { name: 'Gold Necklace', slug: 'gold-necklace', price: 800, status: ProductStatus.ACTIVE, cat: catJewelry, sub: catJewelry.subCategories[1] },
@@ -128,48 +122,6 @@ async function main() {
   }
   console.log('Products created.');
 
-  // 5. Create Sample Orders
-  console.log('--- [DEBUG] Creating Orders... ---');
-  const order1 = await prisma.order.create({
-    data: {
-      user_id: users[0].id,
-      status: OrderStatus.PAID,
-      payment_provider: PaymentProvider.STRIPE,
-      payment_status: PaymentStatus.SUCCESS,
-      subtotal: 1200, total: 1200,
-      items: { create: [{ productId: createdProducts[0].id, price: 1200, quantity: 1 }] }
-    }
-  });
-
-  const order2 = await prisma.order.create({
-    data: {
-      user_id: users[1].id,
-      status: OrderStatus.PENDING,
-      payment_provider: PaymentProvider.PAY_ON_DELIVERY,
-      payment_status: PaymentStatus.PENDING,
-      subtotal: 800, total: 800,
-      items: { create: [{ productId: createdProducts[1].id, price: 800, quantity: 1 }] }
-    }
-  });
-  console.log('Orders created.');
-
-  // 6. Support Conversations
-  console.log('--- [DEBUG] Creating Conversations... ---');
-  await prisma.conversation.create({
-    data: {
-      userId: users[0].id,
-      orderId: order1.id,
-      status: ConversationStatus.OPEN,
-      messages: {
-        create: [
-          { content: 'Hello, when will my ring arrive?', senderRole: MessageSenderRole.USER, senderId: users[0].id },
-          { content: 'Hi! It is being shipped today.', senderRole: MessageSenderRole.ADMIN, senderId: admin.id }
-        ]
-      }
-    }
-  });
-  console.log('Support chats created.');
-
   console.log('--- Seeding Completed Successfully! ---');
 }
 
@@ -177,7 +129,6 @@ main()
   .catch((e) => {
     console.error('--- [CRITICAL ERROR DURING SEEDING] ---');
     console.error('Message:', e.message);
-    console.error('Stack:', e.stack);
     process.exit(1);
   })
   .finally(async () => {
