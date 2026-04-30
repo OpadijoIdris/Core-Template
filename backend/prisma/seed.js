@@ -6,7 +6,16 @@ import bcrypt from 'bcrypt';
 
 async function main() {
   console.log('--- [DEBUG] Seed Script Started ---');
-  console.log('--- [DEBUG] DATABASE_URL exists:', !!process.env.DATABASE_URL);
+  if (process.env.DATABASE_URL) {
+    try {
+      const dbUrl = new URL(process.env.DATABASE_URL);
+      console.log('--- [DEBUG] DB Hostname:', dbUrl.hostname);
+    } catch (e) {
+      console.log('--- [DEBUG] Could not parse DATABASE_URL');
+    }
+  } else {
+    console.log('--- [DEBUG] DATABASE_URL is MISSING');
+  }
 
   // 1. Clean existing data
   try {
