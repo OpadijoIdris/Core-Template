@@ -1,9 +1,16 @@
 import Redis from 'ioredis';
+import 'dotenv/config';
 
-const redis = new Redis(process.env.REDIS_URL);
+let redisUrl = process.env.REDIS_URL || "";
+if (redisUrl) {
+    // Clean potential quotes or whitespace from environment variables
+    redisUrl = redisUrl.trim().replace(/^["'](.+)["']$/, '$1');
+}
+
+const redis = new Redis(redisUrl);
 
 redis.on("connect", () => {
-    console.log("Redis conected");
+    console.log("Redis connected");
 });
 
 redis.on("error", (err) => {
