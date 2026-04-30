@@ -326,6 +326,3 @@ model Message {
   @@index([senderRole])
   @@index([createdAt])
 }
-
-
-
