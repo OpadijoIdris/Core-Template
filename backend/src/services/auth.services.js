@@ -1,7 +1,6 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import prisma from '../config/postgres.js';
-import redis from '../config/redis.js';
 import { sendEmail } from './mail.services.js';
 
 export const registerUser = async ({ email, password }) => {
@@ -17,17 +16,17 @@ export const registerUser = async ({ email, password }) => {
     const token = crypto.randomBytes(32).toString("hex");
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
+const expiresAt = new Date(Date.now() + 60 * 30 * 1000);
     const user = await prisma.user.create({
-        data: {
+      data: {
         email,
         password: hashedPassword,
         isVerified: false,
         verificationToken: token,
-        },
+        verificationCode,
+        verificationExpiresAt: expiresAt,
+      },
     });
-
-    await redis.set(`email_verify:${token}`, user.id, "EX", 60 * 30);
-    await redis.set(`email_code:${verificationCode}`, user.id, "EX", 60 * 30);
 
     const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${token}`;
     await sendEmail({
@@ -134,29 +133,28 @@ export const loginUser = async ({ email, password }) => {
 
 export const verifyEmailService = async (tokenOrCode) => {
   // Try to verify by token first
-  let userId = await redis.get(`email_verify:${tokenOrCode}`);
-  
-  // If not found, try to verify by code
-  if (!userId) {
-    userId = await redis.get(`email_code:${tokenOrCode}`);
-  }
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { verificationToken: tokenOrCode },
+        { verificationCode: tokenOrCode }
+      ]
+    }
+  });
 
-  if (!userId) {
+  if (!user || !user.verificationExpiresAt || user.verificationExpiresAt < new Date()) {
     throw new Error("Invalid or expired verification link");
   }
 
   await prisma.user.update({
-    where: { id: userId },
-    data: { 
-        isVerified: true,
-        verificationToken: null
-
+    where: { id: user.id },
+    data: {
+      isVerified: true,
+      verificationToken: null,
+      verificationCode: null,
+      verificationExpiresAt: null,
     }
   });
-
-  // Clean up both token and code from Redis
-  await redis.del(`email_verify:${tokenOrCode}`);
-  await redis.del(`email_code:${tokenOrCode}`);
 };
 
 export const resendVerificationEmailService = async (email) => {
@@ -172,9 +170,16 @@ export const resendVerificationEmailService = async (email) => {
 
   const token = crypto.randomBytes(32).toString("hex");
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 60 * 30 * 1000);
 
-  await redis.set(`email_verify:${token}`, user.id, "EX", 60 * 30);
-  await redis.set(`email_code:${verificationCode}`, user.id, "EX", 60 * 30);
+  await prisma.user.update({
+    where: { email },
+    data: {
+      verificationToken: token,
+      verificationCode,
+      verificationExpiresAt: expiresAt,
+    }
+  });
 
   const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${token}`;
   await sendEmail({
@@ -266,8 +271,15 @@ export const forgotPasswordService = async (email) => {
   const resetToken = crypto.randomBytes(32).toString("hex");
   const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-  await redis.set(`password_reset:${resetToken}`, user.id, "EX", 60 * 15); // 15 minutes
-  await redis.set(`password_reset_code:${resetCode}`, user.id, "EX", 60 * 15);
+  const expiresAt = new Date(Date.now() + 60 * 15 * 1000);
+  await prisma.user.update({
+    where: { email },
+    data: {
+      passwordResetToken: resetToken,
+      passwordResetCode: resetCode,
+      passwordResetExpiresAt: expiresAt,
+    }
+  });
 
   const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
   await sendEmail({
@@ -352,14 +364,16 @@ export const forgotPasswordService = async (email) => {
 
 export const resetPasswordService = async (tokenOrCode, newPassword) => {
 
-    let userId = await redis.get(`password_reset:${tokenOrCode}`);
-  
-  // If not found, try code
-  if (!userId) {
-    userId = await redis.get(`password_reset_code:${tokenOrCode}`);
-  }
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { passwordResetToken: tokenOrCode },
+        { passwordResetCode: tokenOrCode }
+      ]
+    }
+  });
 
-  if (!userId) {
+  if (!user || !user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()) {
     throw new Error("Invalid or expired reset link");
   }
 
@@ -367,13 +381,14 @@ export const resetPasswordService = async (tokenOrCode, newPassword) => {
   const hashedPassword = await bcrypt.hash(newPassword, salt);
 
   await prisma.user.update({
-    where: { id: userId },
-    data: { password: hashedPassword }
+    where: { id: user.id },
+    data: {
+      password: hashedPassword,
+      passwordResetToken: null,
+      passwordResetCode: null,
+      passwordResetExpiresAt: null,
+    }
   });
-
-  // Clean up both token and code from Redis
-  await redis.del(`password_reset:${tokenOrCode}`);
-  await redis.del(`password_reset_code:${tokenOrCode}`);
 
   return { message: "Password reset successfully" };
 };

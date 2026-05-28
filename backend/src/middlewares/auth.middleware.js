@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import redis from '../config/redis.js';
+import prisma from '../config/postgres.js';
 
 export const protect = async (req, res, next) => {
   try {
@@ -15,14 +15,19 @@ export const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
+    // Check for revoked tokens
+    const blacklistedToken = await prisma.blacklistedToken.findUnique({ where: { token } });
+    if (blacklistedToken) {
+      return res.status(401).json({ message: "Not authorized, token revoked" });
+    }
+
     // Single Active Session Check
     if (decoded.sid) {
-      const currentSid = await redis.get(`user_session:${decoded.id}`);
-      
-      if (!currentSid || currentSid !== decoded.sid) {
+      const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+      if (!user || !user.currentSessionSid || user.currentSessionSid !== decoded.sid || !user.currentSessionExpiresAt || user.currentSessionExpiresAt < new Date()) {
         return res.status(401).json({ 
-          success: false, 
+          success: false,
           message: "Session mismatch. You have been logged in from another device." 
         });
       }
