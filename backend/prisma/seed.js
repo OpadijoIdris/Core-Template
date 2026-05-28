@@ -17,19 +17,21 @@ async function main() {
     } catch (e) {}
   }
 
+  // 1. Check if data already exists
+  const userCount = await prisma.user.count();
+  const categoryCount = await prisma.category.count();
+  const productCount = await prisma.product.count();
+
+  if (userCount > 0 || categoryCount > 0 || productCount > 0) {
+    console.log('--- [DEBUG] Data already exists. Skipping seed to prevent data loss. ---');
+    return;
+  }
+
   const hashedPassword = await bcrypt.hash('password123', 10);
   
-  console.log('--- [DEBUG] Upserting Admin User... ---');
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
-    update: {
-      password: hashedPassword,
-      role: Role.SUPER_ADMIN,
-      isVerified: true,
-      firstName: 'Coree',
-      lastName: 'Admin',
-    },
-    create: {
+  console.log('--- [DEBUG] Seeding Admin User... ---');
+  const admin = await prisma.user.create({
+    data: {
       email: 'admin@example.com',
       password: hashedPassword,
       role: Role.SUPER_ADMIN,
@@ -38,31 +40,7 @@ async function main() {
       lastName: 'Admin',
     },
   });
-  console.log('Admin user upserted:', admin.email);
-
-  // 1. Clean other data (Optional, but let's keep it clean for demo)
-  try {
-    console.log('--- [DEBUG] Cleaning Other Tables... ---');
-    await prisma.message.deleteMany();
-    await prisma.conversation.deleteMany();
-    await prisma.orderAudit.deleteMany();
-    await prisma.orderItem.deleteMany();
-    await prisma.order.deleteMany();
-    await prisma.cartItem.deleteMany();
-    await prisma.cart.deleteMany();
-    await prisma.product.deleteMany();
-    await prisma.subCategory.deleteMany();
-    await prisma.category.deleteMany();
-    // We don't delete users here because we just upserted the admin
-    await prisma.user.deleteMany({
-      where: {
-        NOT: { email: 'admin@example.com' }
-      }
-    });
-    console.log('Other data cleared.');
-  } catch (error) {
-    console.log('--- [DEBUG] Error clearing tables:', error.message);
-  }
+  console.log('Admin user created:', admin.email);
 
   // 2. Create Regular Users
   const userEmails = ['john@example.com', 'jane@example.com', 'bob@example.com'];
