@@ -25,13 +25,7 @@ const LoginPage = () => {
       login(userData); 
     } catch (err: any) {
       const message = err.response?.data?.message || 'Authentication failed.';
-      
-      if (message.toLowerCase().includes('verify') || message.toLowerCase().includes('verification')) {
-        router.push('/auth/verify-email');
-        return;
-      }
-      
-      setError(message || 'Authentication failed. Please verify your credentials.');
+      setError(message || 'Authentication failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -107,14 +101,9 @@ const LoginPage = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center ml-1">
                   <label className="text-xs font-black text-gray-700 uppercase tracking-widest">Account Password</label>
-                  <div className="flex flex-col items-end gap-2">
-                    <Link href="/auth/forgot-password" title="Recover Access" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">
-                      Forgot Password?
-                    </Link>
-                    <Link href="/auth/verify-email" title="Resend Verification" className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:underline opacity-80 hover:opacity-100">
-                      Verify Email?
-                    </Link>
-                  </div>
+                  <Link href="/auth/forgot-password" title="Recover Access" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">
+                    Forgot Password?
+                  </Link>
                 </div>
                 <div className="relative group">
                   <FiLock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
