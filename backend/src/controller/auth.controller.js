@@ -11,7 +11,6 @@ import {
  import { getUserService } from "../services/user.services.js";
  import prisma from "../config/postgres.js";
  import jwt from "jsonwebtoken";
- import { checkLoginRateLimit, resetLoginRateLimit, rateLimit, resetRateLimit } from "../config/rateLimit.js";
  import crypto from "crypto";
 
  export const register = async (req, res) => {
@@ -59,23 +58,6 @@ import {
 export const login = async (req, res) => {
     try {
         const { email } = req.body;
-        const ip = req.ip; 
-
-        const limiter = await checkLoginRateLimit({ email, ip });
-
-        if (limiter.isLimited) {
-            const retryAfter = Math.max(limiter.email.retryAfter, limiter.ip.retryAfter);
-
-            return res.status(429).json({
-                success: false,
-                message: "Too many login attempts. Try again later.",
-                retryAfter,  
-                attempts: {
-                    email: limiter.email.attempts,
-                    ip: limiter.ip.attempts
-                }
-            });
-        }
 
         const { user } = await loginUser(req.body);
 
@@ -93,8 +75,6 @@ export const login = async (req, res) => {
             currentSessionExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           }
         });
-
-        await resetLoginRateLimit({ email, ip });
 
         res.cookie("token", token, {
             httpOnly: true,
@@ -188,13 +168,9 @@ export const resendVerificationEmail = async (req, res) => {
   }
 };
 
-const FORGOT_WINDOW = 15 * 60; 
-const FORGOT_MAX = 5; 
-
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const ip = req.ip;
 
     if (!email) {
       return res.status(400).json({
@@ -203,28 +179,7 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    const keyEmail = `rl:forgot:email:${email}`;
-    const keyIp = `rl:forgot:ip:${ip}`;
-
-    const limiterEmail = await rateLimit({ key: keyEmail, windowSeconds: FORGOT_WINDOW, maxAttempts: FORGOT_MAX });
-    const limiterIp = await rateLimit({ key: keyIp, windowSeconds: FORGOT_WINDOW, maxAttempts: FORGOT_MAX });
-
-    if (limiterEmail.isLimited || limiterIp.isLimited) {
-      return res.status(429).json({
-        success: false,
-        message: "Too many password reset attempts. Try again later.",
-        retryAfter: Math.max(limiterEmail.retryAfter, limiterIp.retryAfter),
-        attempts: {
-          email: limiterEmail.attempts,
-          ip: limiterIp.attempts
-        }
-      });
-    }
-
     const result = await forgotPasswordService(email);
-
-    await resetRateLimit(keyEmail);
-    await resetRateLimit(keyIp);
 
     res.status(200).json({
       success: true,
