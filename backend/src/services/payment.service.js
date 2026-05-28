@@ -27,7 +27,7 @@ export const initializePayment = async ({
 };
 
 const createPaystackPayment = async ({ orderId, amount, currency, email }) => {
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const frontendUrl = process.env.FRONTEND_URL || "https://core-template-seven.vercel.app";
     
     const response = await axios.post('https://api.paystack.co/transaction/initialize', {
         email,
