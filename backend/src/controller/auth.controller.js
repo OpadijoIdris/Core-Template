@@ -1,8 +1,6 @@
 import { 
             loginUser,
             registerUser,
-            verifyEmailService,
-            resendVerificationEmailService,
             forgotPasswordService,
             resetPasswordService,
             changePasswordService
@@ -21,7 +19,7 @@ import {
 
     res.status(201).json({
       success: true,
-      message: "Registration successful. Check your email to verify.",
+      message: "Registration successful. You can now log in.",
       user,
     });
   } catch (error) {
@@ -31,28 +29,6 @@ import {
     });
   }
 };
-
-
- export const verifyEmail = async (req, res) => {
-    try {
-        const { token } = req.query;
-        if(!token) {
-            res.status(400).json({ message: "Verification token is required" });
-        }
-
-        await verifyEmailService(token);
-        return res.status(200).json({
-            success: true,
-            message: "Email verified successfully"
-        })
-        
-    } catch (error) {
-        return res.status(400).json({
-            success: false,
-            message: error.message
-        })
-    }
- };
 
 
 export const login = async (req, res) => {
@@ -140,31 +116,6 @@ export const login = async (req, res) => {
     res.json({ message: "Logged out successfully" });
   } catch (err) {
     res.status(500).json({ message: "Logout failed" });
-  }
-};
-
-export const resendVerificationEmail = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is required"
-      });
-    }
-
-    const result = await resendVerificationEmailService(email);
-
-    res.status(200).json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
   }
 };
 
