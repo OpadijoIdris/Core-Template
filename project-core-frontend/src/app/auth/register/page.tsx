@@ -20,7 +20,7 @@ const RegisterPage = () => {
     setIsLoading(true);
     try {
       await register({ email, password });
-      router.push('/auth/verify-email');
+      router.push('/auth/login');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Initialization failed. System node could not be created.');
     } finally {

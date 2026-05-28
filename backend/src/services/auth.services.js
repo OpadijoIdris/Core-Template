@@ -13,94 +13,12 @@ export const registerUser = async ({ email, password }) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const token = crypto.randomBytes(32).toString("hex");
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-const expiresAt = new Date(Date.now() + 60 * 30 * 1000);
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
-        isVerified: false,
-        verificationToken: token,
-        verificationCode,
-        verificationExpiresAt: expiresAt,
+        isVerified: true, // Default to true as per new requirement
       },
-    });
-
-    const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${token}`;
-    await sendEmail({
-    to: user.email,
-    subject: "Welcome to Our App – Verify Your Email",
-    html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8" />
-            <style>
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #f4f4f7;
-                margin: 0;
-                padding: 0;
-            }
-            .container {
-                max-width: 600px;
-                margin: 40px auto;
-                background: #ffffff;
-                border-radius: 8px;
-                overflow: hidden;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            .header {
-                background: #4CAF50;
-                color: #ffffff;
-                text-align: center;
-                padding: 20px;
-            }
-            .content {
-                padding: 30px;
-                color: #333333;
-                line-height: 1.6;
-            }
-            .button {
-                display: inline-block;
-                padding: 12px 20px;
-                margin-top: 20px;
-                background: #4CAF50;
-                color: #ffffff;
-                text-decoration: none;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            .footer {
-                text-align: center;
-                font-size: 12px;
-                color: #888888;
-                padding: 20px;
-            }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-            <div class="header">
-                <h1>Verify Your Email</h1>
-            </div>
-            <div class="content">
-                <p>Hi there,</p>
-                <p>Thanks for signing up! Please confirm your email address to activate your account.</p>                <p><strong>Your verification code is: ${verificationCode}</strong></p>                <p>
-                <a href="${verifyUrl}" class="button">Verify Email</a>
-                </p>
-                <p>If the button doesn’t work, copy and paste this link into your browser:</p>
-                <p><a href="${verifyUrl}">${verifyUrl}</a></p>
-            </div>
-            <div class="footer">
-                <p>&copy; ${new Date().getFullYear()} Your Company. All rights reserved.</p>
-            </div>
-            </div>
-        </body>
-        </html>
-    `,
     });
 
     return { id: user.id, email: user.email };
@@ -114,9 +32,6 @@ export const loginUser = async ({ email, password }) => {
     if(!user) {
         throw new Error ("Invalid Credentials");
     };
-    if(!user.isVerified) {
-        throw new Error("Please verify your email to login");
-    };
 
     const isMatch = await bcrypt.compare(password, user.password);
     if(!isMatch) {
@@ -129,136 +44,6 @@ export const loginUser = async ({ email, password }) => {
         role: user.role,
         avatarUrl: user.avatarUrl
     }};
-};
-
-export const verifyEmailService = async (tokenOrCode) => {
-  // Try to verify by token first
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { verificationToken: tokenOrCode },
-        { verificationCode: tokenOrCode }
-      ]
-    }
-  });
-
-  if (!user || !user.verificationExpiresAt || user.verificationExpiresAt < new Date()) {
-    throw new Error("Invalid or expired verification link");
-  }
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      isVerified: true,
-      verificationToken: null,
-      verificationCode: null,
-      verificationExpiresAt: null,
-    }
-  });
-};
-
-export const resendVerificationEmailService = async (email) => {
-  const user = await prisma.user.findUnique({ where: { email } });
-  
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  if (user.isVerified) {
-    throw new Error("Email already verified");
-  }
-
-  const token = crypto.randomBytes(32).toString("hex");
-  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 60 * 30 * 1000);
-
-  await prisma.user.update({
-    where: { email },
-    data: {
-      verificationToken: token,
-      verificationCode,
-      verificationExpiresAt: expiresAt,
-    }
-  });
-
-  const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${token}`;
-  await sendEmail({
-    to: user.email,
-    subject: "Verify Your Email – Resend",
-    html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8" />
-            <style>
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #f4f4f7;
-                margin: 0;
-                padding: 0;
-            }
-            .container {
-                max-width: 600px;
-                margin: 40px auto;
-                background: #ffffff;
-                border-radius: 8px;
-                overflow: hidden;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            .header {
-                background: #4CAF50;
-                color: #ffffff;
-                text-align: center;
-                padding: 20px;
-            }
-            .content {
-                padding: 30px;
-                color: #333333;
-                line-height: 1.6;
-            }
-            .button {
-                display: inline-block;
-                padding: 12px 20px;
-                margin-top: 20px;
-                background: #4CAF50;
-                color: #ffffff;
-                text-decoration: none;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            .footer {
-                text-align: center;
-                font-size: 12px;
-                color: #888888;
-                padding: 20px;
-            }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-            <div class="header">
-                <h1>Verify Your Email</h1>
-            </div>
-            <div class="content">
-                <p>Hi there,</p>
-                <p>You requested a new verification link. Please confirm your email address to activate your account.</p>
-                <p><strong>Your verification code is: ${verificationCode}</strong></p>
-                <p>
-                <a href="${verifyUrl}" class="button">Verify Email</a>
-                </p>
-                <p>If the button doesn't work, copy and paste this link into your browser:</p>
-                <p><a href="${verifyUrl}">${verifyUrl}</a></p>
-            </div>
-            <div class="footer">
-                <p>&copy; ${new Date().getFullYear()} Your Company. All rights reserved.</p>
-            </div>
-            </div>
-        </body>
-        </html>
-    `,
-  });
-
-  return { message: "Verification email sent successfully" };
 };
 
 export const forgotPasswordService = async (email) => {
