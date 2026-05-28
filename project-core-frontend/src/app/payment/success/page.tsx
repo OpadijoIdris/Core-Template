@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -63,7 +63,7 @@ function PaymentSuccessContent() {
         </div>
         
         <p className="text-[10px] text-gray-400 mt-8 uppercase font-bold tracking-widest">
-          A confirmation email has been sent to your inbox.
+          Your order details are available in your dashboard.
         </p>
       </div>
     </div>
