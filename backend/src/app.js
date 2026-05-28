@@ -4,7 +4,6 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 import hpp from 'hpp';
 
 // Route Imports
@@ -57,15 +56,7 @@ app.use(urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 app.use(hpp()); // Prevent parameter pollution
 
-// 5. GLOBAL RATE LIMITING
-const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // Limit each IP to 200 requests per window
-    message: { success: false, message: "Too many requests. Please try again later." }
-});
-app.use("/api", globalLimiter);
-
-// 6. API ROUTES
+// 5. API ROUTES
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/category", categoryRouter);
@@ -77,12 +68,12 @@ app.use("/api/order", orderRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/analytics", analyticsRouter);
 
-// 7. EXTERNAL CALLBACKS
+// 6. EXTERNAL CALLBACKS
 app.get("/paystack/callback", (req, res) => {
   res.send("Payment received. You can close this page.");
 });
 
-// 8. SYSTEM HEALTH CHECK
+// 7. SYSTEM HEALTH CHECK
 app.get("/", (_, res) => {
     res.json({ 
         success: true,
@@ -91,7 +82,7 @@ app.get("/", (_, res) => {
     })
 });
 
-// 9. 404 NOT FOUND HANDLER
+// 8. 404 NOT FOUND HANDLER
 app.use((req, res) => {
     res.status(404).json({
         success: false,
@@ -99,7 +90,7 @@ app.use((req, res) => {
     });
 });
 
-// 10. GLOBAL ERROR HANDLING MIDDLEWARE
+// 9. GLOBAL ERROR HANDLING MIDDLEWARE
 app.use((err, req, res, next) => {
     console.error("GLOBAL ERROR:", err.stack);
     
