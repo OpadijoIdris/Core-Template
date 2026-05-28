@@ -17,20 +17,34 @@ model User {
   password           String
   role               Role     @default(USER)
   isVerified         Boolean  @default(false)
-  avatarUrl          String?
-  verificationToken  String?
-  firstName          String?
-  lastName           String?
-  products           Product[] 
-  cart               Cart?
-  userOrders        Order[]
-  conversation      Conversation[]
+  avatarUrl                  String?
+  verificationToken          String?
+  verificationCode           String?
+  verificationExpiresAt      DateTime?
+  passwordResetToken         String?
+  passwordResetCode          String?
+  passwordResetExpiresAt     DateTime?
+  currentSessionSid          String?
+  currentSessionExpiresAt    DateTime?
+  firstName                  String?
+  lastName                   String?
+  products                   Product[] 
+  cart                       Cart?
+  userOrders                 Order[]
+  conversation               Conversation[]
 
-  
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
 
+model BlacklistedToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([expiresAt])
+}
 
 enum Role {
   USER

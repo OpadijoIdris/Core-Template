@@ -9,7 +9,7 @@ import {
  } 
  from "../services/auth.services.js";
  import { getUserService } from "../services/user.services.js";
- import redis from "../config/redis.js";
+ import prisma from "../config/postgres.js";
  import jwt from "jsonwebtoken";
  import { checkLoginRateLimit, resetLoginRateLimit, rateLimit, resetRateLimit } from "../config/rateLimit.js";
  import crypto from "crypto";
@@ -86,8 +86,13 @@ export const login = async (req, res) => {
             { expiresIn: "7d" }
         );
 
-        // Store active session in Redis (Latest login wins)
-        await redis.set(`user_session:${user.id}`, sid, "EX", 7 * 24 * 60 * 60);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            currentSessionSid: sid,
+            currentSessionExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          }
+        });
 
         await resetLoginRateLimit({ email, ip });
 
@@ -128,10 +133,21 @@ export const login = async (req, res) => {
       const decoded = jwt.decode(token);
       const exp = decoded?.exp;
       if (exp) {
-        const ttl = exp - Math.floor(Date.now() / 1000);
-        await redis.set(`blacklist:${token}`, "true", "EX", ttl);
-        // Clear active session identifier
-        await redis.del(`user_session:${decoded.id}`);
+        await prisma.blacklistedToken.upsert({
+          where: { token },
+          update: { expiresAt: new Date(exp * 1000) },
+          create: { token, expiresAt: new Date(exp * 1000) }
+        });
+      }
+
+      if (decoded?.id) {
+        await prisma.user.update({
+          where: { id: decoded.id },
+          data: {
+            currentSessionSid: null,
+            currentSessionExpiresAt: null,
+          }
+        });
       }
     }
 

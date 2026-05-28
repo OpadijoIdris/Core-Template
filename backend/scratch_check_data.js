@@ -1,35 +1,41 @@
-import pg from 'pg';
+import pkg from 'pg';
+const { Client } = pkg;
 import 'dotenv/config';
 
 async function checkData() {
-    const pool = new pg.Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-            rejectUnauthorized: false
-        }
-    });
-
-    try {
-        const client = await pool.connect();
-        console.log("Checking data...");
-
-        const userCount = await client.query('SELECT COUNT(*) FROM "User"');
-        console.log("Total Users:", userCount.rows[0].count);
-
-        const productCount = await client.query('SELECT COUNT(*) FROM "Product"');
-        console.log("Total Products:", productCount.rows[0].count);
-
-        if (userCount.rows[0].count > 0) {
-            const users = await client.query('SELECT email, "isVerified" FROM "User" LIMIT 5');
-            console.log("Sample Users:", users.rows);
-        }
-
-        client.release();
-    } catch (err) {
-        console.error("Query failed:", err.message);
-    } finally {
-        await pool.end();
+  let connectionString = process.env.DATABASE_URL;
+  if (connectionString) {
+    connectionString = connectionString.trim().replace(/^["'](.+)["']$/, '$1');
+    if (connectionString.startsWith('postgresql://')) {
+      connectionString = connectionString.replace('postgresql://', 'postgres://');
     }
+    if (!connectionString.includes('sslmode=')) {
+      connectionString += connectionString.includes('?') ? '&sslmode=require' : '?sslmode=require';
+    }
+  }
+
+  const client = new Client({
+    connectionString,
+  });
+
+  try {
+    await client.connect();
+    console.log('Connected to database.');
+
+    const res = await client.query('SELECT id, email, role, "isVerified" FROM "User" WHERE email = $1', ['admin@example.com']);
+    
+    if (res.rows.length > 0) {
+      console.log('Admin user found:', res.rows[0]);
+    } else {
+      console.log('Admin user NOT found.');
+      const allUsers = await client.query('SELECT count(*) FROM "User"');
+      console.log('Total user count:', allUsers.rows[0].count);
+    }
+  } catch (err) {
+    console.error('Query failed:', err.message);
+  } finally {
+    await client.end();
+  }
 }
 
 checkData();
